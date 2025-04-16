@@ -1,0 +1,128 @@
+.transcript-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.toast {
+  visibility: hidden;
+  min-width: 250px;
+  background-color: #1f2937;
+  color: #f3f4f6;
+  text-align: center;
+  border-radius: 8px;
+  padding: 16px;
+  position: fixed;
+  z-index: 1;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: visibility 0s, opacity 0.3s linear;
+}
+
+.toast.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 로딩 스피너 스타일 */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: #f3f4f6;
+  margin-top: 20px;
+  font-size: 1.2em;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 떠다니는 별 */
+.background-stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.background-stars span {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  background-color: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  animation: star-animation 5s linear infinite;
+}
+
+@keyframes star-animation {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(100vw);
+    opacity: 0;
+  }
+}
+
+.background-stars span:nth-child(1) { animation-delay: 0s; }
+.background-stars span:nth-child(2) { animation-delay: 1s; }
+.background-stars span:nth-child(3) { animation-delay: 2s; }
+.background-stars span:nth-child(4) { animation-delay: 3s; }
+.background-stars span:nth-child(5) { animation-delay: 4s; }
+.background-stars span:nth-child(6) { animation-delay: 5s; }
+.background-stars span:nth-child(7) { animation-delay: 6s; }
+.background-stars span:nth-child(8) { animation-delay: 7s; }
+.background-stars span:nth-child(9) { animation-delay: 8s; }
+.background-stars span:nth-child(10) { animation-delay: 9s; }
+
+/* 복사 버튼 스타일 */
+.copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #3b82f6;
+  transition: color 0.2s;
+}
+
+.copy-btn:hover {
+  color: #60a5fa;
+}
