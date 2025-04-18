@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+yt-dlp
+openai
+jinja2
+sqlalchemy
+requests

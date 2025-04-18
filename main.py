@@ -14,6 +14,41 @@ import argparse
 from config import Config
 from database import Database
 
+import requests
+
+def call_claude(system_prompt, user_prompt):
+    headers = {
+        "Authorization": f"Bearer {load_openai_api_key()}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "anthropic/claude-3-opus-20240229",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "max_tokens": 512  # ← 여기를 추가!
+    }
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Claude API 오류: {response.status_code} - {response.text}")
+    
+    result = response.json()
+    print("🧠 Claude 응답:", json.dumps(result, indent=2, ensure_ascii=False))
+
+    try:
+        return result["choices"][0]["message"]["content"]
+    except (KeyError, IndexError) as e:
+        print("❗ Claude 응답 파싱 실패:", result)
+        raise e
+
+
 # 앱 초기화 전에 설정 검증
 Config.init_app()
 
@@ -160,6 +195,7 @@ def get_prompts(detected_lang, extracted_text):
 
 @app.post("/process_url")
 async def process_url(youtube_url: YouTubeURL):
+
     db_instance = get_db()
     if not db_instance.decrease_count():
         raise HTTPException(status_code=403,
@@ -181,22 +217,19 @@ async def process_url(youtube_url: YouTubeURL):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url.url, download=True)
 
+        MAX_TRANSCRIPT_CHARS = 500
+
         vtt_file_path = os.path.join(Config.DOWNLOAD_PATH, f"{base_filename}.ko.vtt")
         extracted_text = extract_text_from_vtt(vtt_file_path)
+
+        if len(extracted_text) > MAX_TRANSCRIPT_CHARS:
+            extracted_text = extracted_text[:MAX_TRANSCRIPT_CHARS]
 
         # 언어 감지
         detected_lang = detect_language(extracted_text)
 
         # process_url 함수 내에서 사용할 때:
         system_prompt, user_prompt = get_prompts(detected_lang, extracted_text)
-
-        response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
 
         # response = client.chat.completions.create(
         #     model="gpt-4-1106-preview",
@@ -208,7 +241,7 @@ async def process_url(youtube_url: YouTubeURL):
         #     ]
         # )
 
-        summary = response.choices[0].message.content
+        summary = call_claude(system_prompt, user_prompt)
 
         return {
             "success": True,
