@@ -27,7 +27,7 @@ def call_claude(system_prompt, user_prompt):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 512  # ← 여기를 추가!
+        "max_tokens": 256  # 무료 사용자 기준 적절한 토큰 제한
     }
 
     response = requests.post(
@@ -37,16 +37,18 @@ def call_claude(system_prompt, user_prompt):
     )
 
     if response.status_code != 200:
-        raise Exception(f"Claude API 오류: {response.status_code} - {response.text}")
-    
-    result = response.json()
-    print("🧠 Claude 응답:", json.dumps(result, indent=2, ensure_ascii=False))
+        # 응답이 실패했을 경우 detail 메시지를 그대로 반환
+        try:
+            err = response.json().get("error", {}).get("message", "Claude 호출 실패")
+        except Exception:
+            err = "Claude 응답 파싱 오류"
+        raise Exception(f"Claude API 오류: {err}")
 
-    try:
-        return result["choices"][0]["message"]["content"]
-    except (KeyError, IndexError) as e:
-        print("❗ Claude 응답 파싱 실패:", result)
-        raise e
+    result = response.json()
+    if "choices" not in result:
+        raise Exception(f"Claude 응답 오류: choices 필드 없음 → {result}")
+
+    return result["choices"][0]["message"]["content"]
 
 
 # 앱 초기화 전에 설정 검증
@@ -217,13 +219,19 @@ async def process_url(youtube_url: YouTubeURL):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(youtube_url.url, download=True)
 
-        MAX_TRANSCRIPT_CHARS = 500
-
         vtt_file_path = os.path.join(Config.DOWNLOAD_PATH, f"{base_filename}.ko.vtt")
         extracted_text = extract_text_from_vtt(vtt_file_path)
 
+                
+        # ✅ 무료 사용자 토큰 초과 방지를 위한 자막 자르기
+        # 너무 길 경우 Claude 호출이 실패할 수 있으므로 기본 500자 제한 권장
+        MAX_TRANSCRIPT_CHARS = 500
+        
         if len(extracted_text) > MAX_TRANSCRIPT_CHARS:
             extracted_text = extracted_text[:MAX_TRANSCRIPT_CHARS]
+
+        # 💡 만약 유료 API 사용자라면 아래 자르기 코드를 주석 처리해도 좋습니다.
+        # Claude Opus 또는 GPT-4-turbo는 더 긴 자막도 처리 가능합니다.
 
         # 언어 감지
         detected_lang = detect_language(extracted_text)

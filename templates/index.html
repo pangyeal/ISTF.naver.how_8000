@@ -3,119 +3,126 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>YouTube 자막 요약 서비스</title>
+    <title>YouTube 자막 요약</title>
     <link rel="stylesheet" href="/static/style.css" />
-    <script>
-      async function submitURL() {
-        const urlInput = document.getElementById("youtube-url");
-        const resultDiv = document.getElementById("result");
-        const summaryDiv = document.getElementById("summary");
-        const transcriptDiv = document.getElementById("transcript");
-        const remainingCountSpan = document.getElementById("remaining-count");
-
-        const url = urlInput.value.trim();
-        if (!url) {
-          alert("YouTube URL을 입력해주세요.");
-          return;
-        }
-
-        resultDiv.textContent = "처리 중... 잠시만 기다려주세요.";
-        summaryDiv.textContent = "";
-        transcriptDiv.textContent = "";
-
-        try {
-          const response = await fetch("/process_url", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ url }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            resultDiv.textContent = `오류: ${
-              errorData.detail || "알 수 없는 오류 발생"
-            }`;
-            return;
-          }
-
-          const data = await response.json();
-          resultDiv.textContent = "요약이 완료되었습니다.";
-          transcriptDiv.textContent = data.transcript;
-          summaryDiv.textContent = data.summary;
-          remainingCountSpan.textContent = data.remaining_count;
-        } catch (error) {
-          resultDiv.textContent = "서버와 통신 중 오류가 발생했습니다.";
-          console.error(error);
-        }
-      }
-    </script>
+    <script defer src="/static/script.js"></script>
     <style>
       body {
         font-family: "Noto Sans KR", sans-serif;
-        max-width: 800px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-        line-height: 1.6;
+        margin: 2rem;
         background-color: #f9f9f9;
       }
+
       h1 {
         text-align: center;
-        color: #333;
       }
+
+      .url-form {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
       input[type="text"] {
-        width: 80%;
-        padding: 0.5rem;
-        margin-right: 0.5rem;
+        width: 60%;
+        padding: 0.6rem;
         font-size: 1rem;
+        border-radius: 12px;
+        border: 1px solid #ccc;
       }
+
       button {
-        padding: 0.5rem 1rem;
+        padding: 0.6rem 1rem;
         font-size: 1rem;
+        margin-left: 0.5rem;
+        border: none;
+        border-radius: 10px;
+        background-color: #3b82f6;
+        color: white;
         cursor: pointer;
       }
-      #result {
-        margin-top: 1rem;
-        font-weight: bold;
-        color: #007acc;
+
+      button:hover {
+        background-color: #2563eb;
       }
-      #summary,
-      #transcript {
-        white-space: pre-wrap;
-        background: #fff;
-        border: 1px solid #ddd;
+
+      .result-section {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .box {
+        flex: 1;
+        min-width: 300px;
+        background: white;
         padding: 1rem;
-        margin-top: 1rem;
-        border-radius: 5px;
-        max-height: 300px;
+        border-radius: 16px;
+        border: 1px solid #ddd;
+        position: relative;
+        max-height: 500px;
         overflow-y: auto;
       }
-      #remaining {
+
+      .box h2 {
+        margin-top: 0;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 0.9rem;
+        color: #3b82f6;
+        cursor: pointer;
+      }
+
+      #result {
+        text-align: center;
+        font-weight: bold;
+        color: #007acc;
         margin-top: 1rem;
-        text-align: right;
-        color: #555;
       }
     </style>
   </head>
   <body>
-    <h1>YouTube 자막 요약 서비스</h1>
-    <p>남은 요청 수: <span id="remaining-count">{{ remaining_count }}</span></p>
-    <input
-      type="text"
-      id="youtube-url"
-      placeholder="YouTube 동영상 URL을 입력하세요"
-    />
-    <button onclick="submitURL()">요약 요청</button>
+    <h1>YouTube 자막 요약</h1>
+    <p style="text-align: center">
+      남은 요청 수: <span id="count">{{ remaining_count }}</span>
+    </p>
+
+    <div class="url-form">
+      <input
+        type="text"
+        id="youtube-url"
+        placeholder="YouTube URL을 입력하세요"
+      />
+      <button onclick="processURL()" id="download-btn">자막 다운로드</button>
+    </div>
 
     <div id="result"></div>
 
-    <h2>추출된 자막</h2>
-    <div id="transcript"></div>
+    <div class="result-section">
+      <div class="box">
+        <button class="copy-btn" data-target="transcript">복사</button>
+        <h2>전체 자막</h2>
+        <div id="transcript" class="transcript-container"></div>
+      </div>
 
-    <h2>요약 결과</h2>
-    <div id="summary"></div>
-
-    <div id="remaining">※ 요청 수는 서버에서 관리됩니다.</div>
+      <div class="box">
+        <button class="copy-btn" data-target="summary">복사</button>
+        <h2>요약 결과</h2>
+        <div id="summary" class="transcript-container"></div>
+      </div>
+    </div>
+    <!-- 로딩 오버레이 -->
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div id="loadingText" class="loading-text">처리 중입니다...</div>
+    </div>
+    <!-- 토스트 메시지 -->
+    <div id="toast" class="toast"></div>
   </body>
 </html>
